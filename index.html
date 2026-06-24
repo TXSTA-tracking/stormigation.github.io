@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#111827" />
+    <title>Stormigation</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preconnect" href="https://tile.openstreetmap.org" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQZCKT4fF4hu6hCC6Fyk6K0uQTD+4o="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="map" aria-label="Stormigation NOAA radar and storm chase map"></section>
+
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">NOAA / NWS / SPC</p>
+          <h1>Stormigation</h1>
+          <p class="association-sign">Made by the Texas Storm Tracking Association</p>
+        </div>
+        <div class="status-pill" id="statusPill">
+          <i data-lucide="satellite"></i>
+          <span>Going live</span>
+        </div>
+      </header>
+
+      <aside class="control-rail" aria-label="Map controls">
+        <button class="icon-button" id="locateBtn" type="button" title="Track my location">
+          <i data-lucide="crosshair"></i>
+        </button>
+        <button class="icon-button" id="refreshBtn" type="button" title="Refresh NOAA data">
+          <i data-lucide="refresh-cw"></i>
+        </button>
+        <button class="icon-button" id="layersBtn" type="button" title="Layers">
+          <i data-lucide="layers-3"></i>
+        </button>
+        <button class="icon-button" id="fitBtn" type="button" title="Fit active hazards">
+          <i data-lucide="scan"></i>
+        </button>
+        <button class="icon-button" id="updateBtn" type="button" title="Update V.0.1">
+          <i data-lucide="info"></i>
+        </button>
+      </aside>
+
+      <section class="panel" id="layerPanel" aria-label="Weather layers">
+        <div class="panel-header">
+          <h2>Layers</h2>
+          <button class="ghost-button" id="closeLayersBtn" type="button">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label class="switch-row">
+          <span>Radar mosaic</span>
+          <input id="radarToggle" type="checkbox" checked />
+        </label>
+        <label class="switch-row">
+          <span>Active warnings</span>
+          <input id="warningsToggle" type="checkbox" checked />
+        </label>
+        <label class="switch-row">
+          <span>SPC Day 1 outlook</span>
+          <input id="spcToggle" type="checkbox" checked />
+        </label>
+        <label class="switch-row">
+          <span>My track</span>
+          <input id="trackToggle" type="checkbox" checked />
+        </label>
+      </section>
+
+      <section class="sheet" aria-label="Storm information">
+        <div class="grabber" aria-hidden="true"></div>
+        <nav class="tabs" aria-label="Data views">
+          <button class="tab active" data-tab="targets" type="button">
+            <i data-lucide="route"></i>
+            Targets
+          </button>
+          <button class="tab" data-tab="warnings" type="button">
+            <i data-lucide="triangle-alert"></i>
+            Warnings
+          </button>
+          <button class="tab" data-tab="outlook" type="button">
+            <i data-lucide="cloud-lightning"></i>
+            Outlook
+          </button>
+        </nav>
+
+        <div class="sheet-body">
+          <section class="tab-panel active" id="targetsPanel">
+            <div class="summary-grid">
+              <article>
+                <span id="positionLabel">Position</span>
+                <strong id="positionValue">Waiting for GPS</strong>
+              </article>
+              <article>
+                <span>Nearest alert</span>
+                <strong id="nearestAlert">None loaded</strong>
+              </article>
+              <article>
+                <span>Last live pull</span>
+                <strong id="lastUpdateValue">Pending</strong>
+              </article>
+              <article>
+                <span>Track points</span>
+                <strong id="trackPointsValue">0</strong>
+              </article>
+            </div>
+            <div class="detail-grid">
+              <article class="detail-card">
+                <h3><i data-lucide="shield-alert"></i> Chase Readiness</h3>
+                <ul class="detail-list">
+                  <li>Keep a paved escape route behind you.</li>
+                  <li>Confirm fuel, daylight, road closures, and visibility.</li>
+                  <li>Use NWS instructions over any suggested waypoint.</li>
+                </ul>
+              </article>
+              <article class="detail-card">
+                <h3><i data-lucide="radio-tower"></i> Live Sources</h3>
+                <p id="sourceDetail">Radar, active alerts, and SPC outlooks refresh while the tab is open.</p>
+              </article>
+            </div>
+            <div id="targetsList" class="card-list"></div>
+          </section>
+
+          <section class="tab-panel" id="warningsPanel">
+            <div class="legend-block">
+              <span>Warning Severity</span>
+              <div class="legend-row">
+                <b class="legend-chip tornado">Tornado</b>
+                <b class="legend-chip severe">Severe</b>
+                <b class="legend-chip flood">Flood</b>
+                <b class="legend-chip watch">Watch</b>
+              </div>
+            </div>
+            <div id="warningsList" class="card-list"></div>
+          </section>
+
+          <section class="tab-panel" id="outlookPanel">
+            <div class="legend-block">
+              <span>SPC Risk Scale</span>
+              <div class="legend-row">
+                <b class="legend-chip general">TSTM</b>
+                <b class="legend-chip marginal">MRGL</b>
+                <b class="legend-chip slight">SLGT</b>
+                <b class="legend-chip enh">ENH</b>
+                <b class="legend-chip mdt">MDT</b>
+                <b class="legend-chip high">HIGH</b>
+              </div>
+            </div>
+            <div id="outlookList" class="card-list"></div>
+          </section>
+        </div>
+
+        <footer class="safety-note">
+          Use this for situational awareness only. Follow local law, road closures, spotter training, and NWS instructions.
+        </footer>
+      </section>
+
+      <section class="update-modal open" id="updateModal" aria-label="Update V.0.1" role="dialog" aria-modal="true">
+        <article class="update-card">
+          <header class="update-header">
+            <div>
+              <p class="eyebrow">Update V.0.1</p>
+              <h2>Stormigation is live</h2>
+              <p class="association-sign">Made by the Texas Storm Tracking Association</p>
+            </div>
+            <button class="ghost-button" id="closeUpdateBtn" type="button" title="Close update">
+              <i data-lucide="x"></i>
+            </button>
+          </header>
+          <div class="feature-grid">
+            <article>
+              <i data-lucide="radar"></i>
+              <h3>NOAA Radar</h3>
+              <p>CONUS radar mosaic with live redraws and map bounds tuned to stop world-wrap glitches.</p>
+            </article>
+            <article>
+              <i data-lucide="triangle-alert"></i>
+              <h3>NWS Warnings</h3>
+              <p>Active warning and watch polygons, sorted by storm severity for faster scanning.</p>
+            </article>
+            <article>
+              <i data-lucide="cloud-lightning"></i>
+              <h3>SPC Outlook</h3>
+              <p>Day 1 convective outlook zones with color-coded risk levels.</p>
+            </article>
+            <article>
+              <i data-lucide="navigation"></i>
+              <h3>ChaseNav Targets</h3>
+              <p>Decision-support staging waypoints with Google, Apple, and Android navigation links.</p>
+            </article>
+            <article>
+              <i data-lucide="crosshair"></i>
+              <h3>Location Track</h3>
+              <p>GPS marker, recent path line, nearest-alert distance, and track-point count.</p>
+            </article>
+            <article>
+              <i data-lucide="shield-alert"></i>
+              <h3>Safety Detail</h3>
+              <p>Built-in chase reminders, source notes, severity legend, and storm-readiness cues.</p>
+            </article>
+          </div>
+          <button class="primary-button" id="startStormigationBtn" type="button">Start Stormigation</button>
+        </article>
+      </section>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="assets/app.js"></script>
+  </body>
+</html>
